@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fake Sber Terminal</title>
 
 <style>
@@ -24,17 +24,95 @@ html, body {
   overflow: hidden;
 }
 
-/* SberPay button */
+/* SberPay */
 .sberpay {
   position: absolute;
   top: 20px;
   left: 20px;
-  width: 95px; /* чуть меньше */
+  width: 95px;
   cursor: pointer;
-  transition: transform .15s ease;
 }
-.sberpay:active {
-  transform: scale(0.95);
+
+/* Затемнение */
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  display: none;
+  z-index: 5;
+}
+
+/* Модалка */
+.modal {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 6;
+}
+
+.modal-box {
+  width: 290px;
+  background: #fff;
+  border-radius: 20px;
+  padding: 18px;
+  box-sizing: border-box;
+  position: relative;
+}
+
+/* Крестик */
+.close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 20px;
+  height: 20px;
+  border: 1px solid #000;
+  border-radius: 50%;
+  font-size: 14px;
+  line-height: 18px;
+  text-align: center;
+  cursor: pointer;
+}
+
+/* Тексты */
+.modal-box h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #000;
+  font-weight: 500;
+  text-align: left;
+}
+
+.modal-box .hint {
+  margin: 6px 0 16px;
+  font-size: 14px;
+  color: #777;
+  text-align: left;
+}
+
+/* Зелёная полоска */
+.modal-box input {
+  width: 100%;
+  border: none;
+  border-bottom: 3px solid #16c75a;
+  padding: 8px 4px;
+  font-size: 16px;
+  outline: none;
+  margin-bottom: 20px;
+}
+
+/* Кнопка */
+.modal-box button {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 22px;
+  background: #16c75a;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
 }
 
 /* Нижний баннер */
@@ -44,56 +122,6 @@ html, body {
   left: 0;
   width: 100%;
 }
-
-/* Модальное окно */
-.modal {
-  position: absolute;
-  inset: 0;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0,0,0,0.4);
-}
-
-.modal-box {
-  width: 280px;
-  background: #fff;
-  border-radius: 18px;
-  padding: 20px;
-  box-sizing: border-box;
-  text-align: center;
-}
-
-.modal-box h2 {
-  margin: 0 0 14px;
-  font-size: 18px;
-  color: #000;
-  font-weight: 500;
-}
-
-.modal-box input {
-  width: 100%;
-  padding: 10px 12px;
-  font-size: 16px;
-  border-radius: 10px;
-  border: 1px solid #ccc;
-  margin-bottom: 16px;
-  outline: none;
-}
-
-.modal-box button {
-  width: 100%;
-  padding: 12px;
-  border: none;
-  border-radius: 14px;
-  background: #16c75a;
-  color: #fff;
-  font-size: 16px;
-  cursor: pointer;
-}
-.modal-box button:active {
-  transform: scale(0.98);
-}
 </style>
 </head>
 
@@ -101,66 +129,118 @@ html, body {
 
 <div class="terminal">
 
-  <!-- SBERPAY -->
   <img src="sberpay.png" class="sberpay" id="sberBtn">
 
-  <!-- MODAL -->
-  <div class="modal" id="modal">
+  <div class="overlay" id="overlay"></div>
+
+  <!-- ПАРОЛЬ -->
+  <div class="modal" id="passwordModal">
     <div class="modal-box">
-      <h2>Введите пароль:</h2>
-      <input type="text" id="passwordInput" autocomplete="off">
-      <button id="submitBtn">Ввести</button>
+      <div class="close" onclick="closeAll()">✕</div>
+      <h2>Введите пароль</h2>
+      <div class="hint">начните вводить пароль…</div>
+      <input type="text" id="passwordInput">
+      <button onclick="submitPassword()">ВЫЙТИ</button>
     </div>
   </div>
 
-  <!-- TAGLINE -->
+  <!-- СУММА -->
+  <div class="modal" id="amountModal">
+    <div class="modal-box">
+      <div class="close" onclick="closeAll()">✕</div>
+      <h2>Введите сумму</h2>
+      <div class="hint">Начните вводить сумму…</div>
+      <input type="number">
+      <button>НАЧАТЬ ОПЛАТУ</button>
+    </div>
+  </div>
+
   <img src="tagline.png" class="tagline">
 
 </div>
 
 <script>
+/* ====== ЛОГИКА КЛИКОВ ====== */
 const sberBtn = document.getElementById('sberBtn');
-const modal = document.getElementById('modal');
-const submitBtn = document.getElementById('submitBtn');
-const input = document.getElementById('passwordInput');
+const overlay = document.getElementById('overlay');
+const passwordModal = document.getElementById('passwordModal');
+const amountModal = document.getElementById('amountModal');
 
 let clickCount = 0;
-let clickTimer = null;
+let clickTimeout;
+let holdTimer;
 
-/* ТРОЙНОЙ КЛИК */
-sberBtn.onclick = () => {
+/* Обычный клик (тройной) */
+sberBtn.addEventListener('click', () => {
   clickCount++;
 
-  if (clickTimer) clearTimeout(clickTimer);
-
-  clickTimer = setTimeout(() => {
+  clearTimeout(clickTimeout);
+  clickTimeout = setTimeout(() => {
     clickCount = 0;
-  }, 600);
+  }, 1000);
 
   if (clickCount === 3) {
-    modal.style.display = 'flex';
-    input.focus();
+    openModal(passwordModal);
     clickCount = 0;
   }
-};
+});
 
-/* ВВОД ПАРОЛЯ */
-submitBtn.onclick = () => {
-  if (input.value === 'q') {
-    // "Кик" с сайта
+/* Зажатие */
+sberBtn.addEventListener('mousedown', () => {
+  holdTimer = setTimeout(() => {
+    openModal(amountModal);
+  }, 600);
+});
+
+['mouseup','mouseleave'].forEach(e =>
+  sberBtn.addEventListener(e, () => clearTimeout(holdTimer))
+);
+
+/* ====== МОДАЛКИ ====== */
+function openModal(modal) {
+  overlay.style.display = 'block';
+  modal.style.display = 'flex';
+}
+
+function closeAll() {
+  overlay.style.display = 'none';
+  passwordModal.style.display = 'none';
+  amountModal.style.display = 'none';
+}
+
+/* ====== ПАРОЛЬ ====== */
+function submitPassword() {
+  const val = document.getElementById('passwordInput').value;
+  if (val === 'q') {
     window.location.href = 'about:blank';
   } else {
-    input.value = '';
-    alert('Неверный пароль');
+    document.getElementById('passwordInput').value = '';
   }
-};
+}
 
-/* ENTER */
-input.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    submitBtn.click();
+/* ====== ЗАЩИТА КОДА ====== */
+document.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  window.location.href = 'about:blank';
+});
+
+document.addEventListener('keydown', e => {
+  if (
+    e.key === 'F12' ||
+    (e.ctrlKey && e.key.toLowerCase() === 'u') ||
+    (e.ctrlKey && e.shiftKey)
+  ) {
+    e.preventDefault();
+    window.location.href = 'about:blank';
   }
 });
+
+/* DevTools check */
+setInterval(() => {
+  if (window.outerWidth - window.innerWidth > 160) {
+    window.location.href = 'about:blank';
+  }
+}, 500);
 </script>
 
 </body>
