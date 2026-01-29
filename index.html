@@ -2,18 +2,31 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Fake Sber Terminal</title>
 
 <style>
+/* ===== БАЗА ===== */
+* {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 html, body {
   margin: 0;
   padding: 0;
   height: 100%;
   font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
   background: #000;
+  overscroll-behavior: none;
 }
 
+input {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* ===== ТЕРМИНАЛ ===== */
 .terminal {
   position: relative;
   width: 100%;
@@ -22,18 +35,34 @@ html, body {
   margin: 0 auto;
   background: url("basic-background.png") center/cover no-repeat;
   overflow: hidden;
+  touch-action: manipulation;
 }
 
-/* SberPay */
+/* ===== SBERPAY ===== */
 .sberpay {
   position: absolute;
   top: 20px;
   left: 20px;
   width: 95px;
   cursor: pointer;
+
+  /* 🔥 КЛЮЧЕВОЕ */
+  -webkit-touch-callout: none; /* iOS save menu OFF */
+  -webkit-user-drag: none;
+  user-drag: none;
 }
 
-/* Затемнение */
+/* ===== TAGLINE ===== */
+.tagline {
+  position: absolute;
+  bottom: 10px;
+  left: 14px;
+  width: calc(100% - 28px);
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+}
+
+/* ===== ЗАТЕМНЕНИЕ ===== */
 .overlay {
   position: absolute;
   inset: 0;
@@ -42,7 +71,7 @@ html, body {
   z-index: 5;
 }
 
-/* Модалки */
+/* ===== МОДАЛКИ ===== */
 .modal {
   position: absolute;
   inset: 0;
@@ -61,7 +90,7 @@ html, body {
   position: relative;
 }
 
-/* Крестик — НЕ круглый */
+/* КРЕСТИК */
 .close {
   position: absolute;
   top: 10px;
@@ -70,12 +99,10 @@ html, body {
   border: 1px solid #000;
   border-radius: 6px;
   font-size: 14px;
-  line-height: 18px;
   cursor: pointer;
-  user-select: none;
 }
 
-/* Тексты */
+/* ТЕКСТ */
 .modal-box h2 {
   margin: 0;
   font-size: 18px;
@@ -91,7 +118,7 @@ html, body {
   text-align: left;
 }
 
-/* Зелёная полоска ввода */
+/* ПОЛЕ */
 .modal-box input {
   width: 100%;
   border: none;
@@ -102,7 +129,7 @@ html, body {
   margin-bottom: 20px;
 }
 
-/* Кнопка — среднее скругление */
+/* КНОПКА */
 .modal-box button {
   width: 100%;
   padding: 13px;
@@ -113,14 +140,6 @@ html, body {
   font-size: 16px;
   cursor: pointer;
 }
-
-/* Tagline — меньше и правее */
-.tagline {
-  position: absolute;
-  bottom: 10px;
-  left: 14px;
-  width: calc(100% - 28px);
-}
 </style>
 </head>
 
@@ -128,8 +147,7 @@ html, body {
 
 <div class="terminal">
 
-  <img src="sberpay.png" class="sberpay" id="sberBtn">
-
+  <img src="sberpay.png" class="sberpay" id="sberBtn" draggable="false">
   <div class="overlay" id="overlay"></div>
 
   <!-- ПАРОЛЬ -->
@@ -154,12 +172,21 @@ html, body {
     </div>
   </div>
 
-  <img src="tagline.png" class="tagline">
+  <img src="tagline.png" class="tagline" draggable="false">
 
 </div>
 
 <script>
-/* ===== КЛИКИ ===== */
+/* ===== ЗАПРЕТ СОХРАНЕНИЯ ===== */
+document.addEventListener('contextmenu', e => {
+  if (e.target.tagName === 'IMG') e.preventDefault();
+});
+
+document.addEventListener('dragstart', e => {
+  if (e.target.tagName === 'IMG') e.preventDefault();
+});
+
+/* ===== ЛОГИКА SBERPAY ===== */
 const sberBtn = document.getElementById('sberBtn');
 const overlay = document.getElementById('overlay');
 const passwordModal = document.getElementById('passwordModal');
@@ -169,14 +196,12 @@ let clickCount = 0;
 let clickTimeout;
 let holdTimer;
 
-/* ТРОЙНОЙ КЛИК */
+/* ТРОЙНОЙ КЛИК (ПК) */
 sberBtn.addEventListener('click', () => {
   clickCount++;
   clearTimeout(clickTimeout);
 
-  clickTimeout = setTimeout(() => {
-    clickCount = 0;
-  }, 1000);
+  clickTimeout = setTimeout(() => clickCount = 0, 1000);
 
   if (clickCount === 3) {
     openModal(passwordModal);
@@ -184,18 +209,17 @@ sberBtn.addEventListener('click', () => {
   }
 });
 
-/* ЗАЖАТИЕ */
-sberBtn.addEventListener('mousedown', () => {
+/* ДОЛГИЙ ТАП (МОБИЛА) */
+sberBtn.addEventListener('touchstart', () => {
   holdTimer = setTimeout(() => {
     openModal(amountModal);
   }, 600);
 });
 
-['mouseup','mouseleave'].forEach(e =>
-  sberBtn.addEventListener(e, () => clearTimeout(holdTimer))
-);
+sberBtn.addEventListener('touchend', () => clearTimeout(holdTimer));
+sberBtn.addEventListener('touchmove', () => clearTimeout(holdTimer));
 
-/* МОДАЛКИ */
+/* ===== МОДАЛКИ ===== */
 function openModal(modal) {
   overlay.style.display = 'block';
   modal.style.display = 'flex';
@@ -207,38 +231,14 @@ function closeAll() {
   amountModal.style.display = 'none';
 }
 
-/* ПАРОЛЬ */
+/* ===== ПАРОЛЬ ===== */
 function submitPassword() {
-  const val = document.getElementById('passwordInput').value;
-  if (val === 'q') {
+  if (passwordInput.value === 'q') {
     window.location.href = 'about:blank';
   } else {
-    document.getElementById('passwordInput').value = '';
+    passwordInput.value = '';
   }
 }
-
-/* ЗАЩИТА */
-document.addEventListener('contextmenu', e => {
-  e.preventDefault();
-  window.location.href = 'about:blank';
-});
-
-document.addEventListener('keydown', e => {
-  if (
-    e.key === 'F12' ||
-    (e.ctrlKey && e.key.toLowerCase() === 'u') ||
-    (e.ctrlKey && e.shiftKey)
-  ) {
-    e.preventDefault();
-    window.location.href = 'about:blank';
-  }
-});
-
-setInterval(() => {
-  if (window.outerWidth - window.innerWidth > 160) {
-    window.location.href = 'about:blank';
-  }
-}, 500);
 </script>
 
 </body>
