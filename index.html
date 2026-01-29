@@ -14,7 +14,6 @@ html, body {
   background: #000;
 }
 
-/* Терминал */
 .terminal {
   position: relative;
   width: 100%;
@@ -25,49 +24,17 @@ html, body {
   overflow: hidden;
 }
 
-/* Кнопка SberPay */
+/* SberPay button */
 .sberpay {
   position: absolute;
   top: 20px;
   left: 20px;
-  width: 120px;
+  width: 95px; /* чуть меньше */
   cursor: pointer;
-  transition: transform .2s ease;
+  transition: transform .15s ease;
 }
 .sberpay:active {
   transform: scale(0.95);
-}
-
-/* Центр */
-.center {
-  position: absolute;
-  top: 45%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-  color: #fff;
-}
-
-/* Статус */
-.status {
-  font-size: 20px;
-  margin-bottom: 20px;
-}
-
-/* Лоадер */
-.loader {
-  width: 40px;
-  height: 40px;
-  border: 4px solid rgba(255,255,255,0.2);
-  border-top: 4px solid #00ff88;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  display: none;
-  margin: 0 auto;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
 }
 
 /* Нижний баннер */
@@ -77,6 +44,56 @@ html, body {
   left: 0;
   width: 100%;
 }
+
+/* Модальное окно */
+.modal {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.4);
+}
+
+.modal-box {
+  width: 280px;
+  background: #fff;
+  border-radius: 18px;
+  padding: 20px;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.modal-box h2 {
+  margin: 0 0 14px;
+  font-size: 18px;
+  color: #000;
+  font-weight: 500;
+}
+
+.modal-box input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  margin-bottom: 16px;
+  outline: none;
+}
+
+.modal-box button {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 14px;
+  background: #16c75a;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+}
+.modal-box button:active {
+  transform: scale(0.98);
+}
 </style>
 </head>
 
@@ -84,40 +101,66 @@ html, body {
 
 <div class="terminal">
 
-  <!-- SBERPAY BUTTON -->
-  <img src="sberpay.png" class="sberpay" id="payBtn" />
+  <!-- SBERPAY -->
+  <img src="sberpay.png" class="sberpay" id="sberBtn">
 
-  <!-- CENTER INFO -->
-  <div class="center">
-    <div class="status" id="statusText">Готово к оплате</div>
-    <div class="loader" id="loader"></div>
+  <!-- MODAL -->
+  <div class="modal" id="modal">
+    <div class="modal-box">
+      <h2>Введите пароль:</h2>
+      <input type="text" id="passwordInput" autocomplete="off">
+      <button id="submitBtn">Ввести</button>
+    </div>
   </div>
 
   <!-- TAGLINE -->
-  <img src="tagline.png" class="tagline" />
+  <img src="tagline.png" class="tagline">
 
 </div>
 
 <script>
-const btn = document.getElementById('payBtn');
-const statusText = document.getElementById('statusText');
-const loader = document.getElementById('loader');
+const sberBtn = document.getElementById('sberBtn');
+const modal = document.getElementById('modal');
+const submitBtn = document.getElementById('submitBtn');
+const input = document.getElementById('passwordInput');
 
-let processing = false;
+let clickCount = 0;
+let clickTimer = null;
 
-btn.onclick = () => {
-  if (processing) return;
+/* ТРОЙНОЙ КЛИК */
+sberBtn.onclick = () => {
+  clickCount++;
 
-  processing = true;
-  statusText.textContent = 'Обработка оплаты…';
-  loader.style.display = 'block';
+  if (clickTimer) clearTimeout(clickTimer);
 
-  setTimeout(() => {
-    loader.style.display = 'none';
-    statusText.textContent = '✅ Оплата успешно выполнена';
-    processing = false;
-  }, 2500);
+  clickTimer = setTimeout(() => {
+    clickCount = 0;
+  }, 600);
+
+  if (clickCount === 3) {
+    modal.style.display = 'flex';
+    input.focus();
+    clickCount = 0;
+  }
 };
+
+/* ВВОД ПАРОЛЯ */
+submitBtn.onclick = () => {
+  if (input.value === 'q') {
+    // "Кик" с сайта
+    window.location.href = 'about:blank';
+  } else {
+    input.value = '';
+    alert('Неверный пароль');
+  }
+};
+
+/* ENTER */
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    submitBtn.click();
+  }
+});
 </script>
 
 </body>
